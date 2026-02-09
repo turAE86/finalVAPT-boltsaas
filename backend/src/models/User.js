@@ -1,3 +1,4 @@
+// backend/src/models/User.js
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
@@ -14,25 +15,26 @@ const userSchema = new mongoose.Schema(
     },
 
     scanCredits: {
-  type: Number,
-  default: 5   // free tier = 5 scans
-},
+      type: Number,
+      default: 5   // free tier = 5 scans
+    },
 
-role: {
-  type: String,
-  enum: ["FREE", "PAID"],
-  default: "FREE"
-},
+    role: {
+      type: String,
+      enum: ["FREE", "PAID"],
+      default: "FREE"
+    },
 
     password: {
-  type: String,
-  required: function () {
-    return !this.googleId;
-  }
-},
-googleId: {
-  type: String
-},
+      type: String,
+      required: function () {
+        return !this.googleId;
+      }
+    },
+
+    googleId: {
+      type: String
+    },
 
     otp: String,
     otpExpiry: Date,
@@ -41,8 +43,18 @@ googleId: {
       default: false
     },
     resetToken: String,
-resetTokenExpiry: Date
+    resetTokenExpiry: Date,
 
+    // Add scanner agreement acceptance
+    scannerAgreementAccepted: {
+      type: Boolean,
+      default: false
+    },
+    scannerAgreementAcceptedAt: Date,
+    scannerAgreementVersion: {
+      type: String,
+      default: "1.0"
+    }
   },
   { timestamps: true }
 );

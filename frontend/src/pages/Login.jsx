@@ -37,9 +37,15 @@ const LoginPage = () => {
     }
   };
 
-  const handleGoogleLogin = () => {
+// Update in frontend/src/pages/Login.jsx - just the Google login function
+const handleGoogleLogin = () => {
+  try {
     window.location.href = 'http://localhost:5000/api/auth/google';
-  };
+  } catch (err) {
+    console.error('Google login error:', err);
+    alert('Failed to initiate Google login. Please try again.');
+  }
+};
 
   return (
     <>

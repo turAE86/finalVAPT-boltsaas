@@ -30,9 +30,15 @@ const SignupPage = () => {
     }
   };
 
-  const handleGoogleSignUp = () => {
+// Update in frontend/src/pages/Signup.jsx - just the Google signup function
+const handleGoogleSignUp = () => {
+  try {
     window.location.href = 'http://localhost:5000/api/auth/google';
-  };
+  } catch (err) {
+    console.error('Google signup error:', err);
+    alert('Failed to initiate Google signup. Please try again.');
+  }
+};
 
   return (
     <>

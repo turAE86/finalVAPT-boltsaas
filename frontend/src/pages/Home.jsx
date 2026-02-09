@@ -1,4 +1,7 @@
 import Hero from '../components/Hero';
+import ThreatManagementSection from '../components/ThreatManagementSection';
+import ConsultingContactWidget from '../components/ConsultingContactWidget';
+import MethodologySection from '../components/MethodologySection';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 
@@ -22,6 +25,9 @@ const Home = () => {
       <div className="relative z-10 flex-1 flex flex-col">
         <main className="relative z-10 flex-1 flex flex-col items-center px-6 pb-20 text-center pt-20">
           <Hero />
+          <ThreatManagementSection />
+          <ConsultingContactWidget />
+          <MethodologySection />
         </main>
       </div>
 

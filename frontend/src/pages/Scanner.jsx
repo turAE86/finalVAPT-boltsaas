@@ -1,13 +1,15 @@
+import React from 'react';
 import { Zap, AlertCircle, CheckCircle, Clock, TrendingUp, Shield, Radar, Bug, Lock, LogIn, Download } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
+import ClickwrapAgreement from '../components/ClickwrapAgreement';
 import SeverityChart from '../components/SeverityChart';
 
 const Scanner = () => {
-  const { user } = useAuth();
+  const { user, login: updateAuthUser } = useAuth();
   const [target, setTarget] = useState('');
   const [scanStarted, setScanStarted] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
@@ -16,12 +18,25 @@ const Scanner = () => {
   const [currentScan, setCurrentScan] = useState(null);
   const [scans, setScans] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showAgreement, setShowAgreement] = useState(false);
+  const [agreementAccepted, setAgreementAccepted] = useState(false);
+  const [acceptingAgreement, setAcceptingAgreement] = useState(false);
+
+  // Check if user has already accepted the agreement from DB
+  useEffect(() => {
+    if (user) {
+      setAgreementAccepted(user.scannerAgreementAccepted || false);
+      if (!user.scannerAgreementAccepted) {
+        setShowAgreement(true);
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
-    if (user && activeTab === 'history') {
+    if (user && activeTab === 'history' && agreementAccepted) {
       fetchScanHistory();
     }
-  }, [user, activeTab]);
+  }, [user, activeTab, agreementAccepted]);
 
   const fetchScanHistory = async () => {
     try {
@@ -30,6 +45,34 @@ const Scanner = () => {
     } catch (err) {
       console.error('Failed to fetch scans:', err);
     }
+  };
+
+  const handleAcceptAgreement = async () => {
+    if (user) {
+      setAcceptingAgreement(true);
+      try {
+        const res = await api.post('/api/auth/accept-scanner-agreement');
+        
+        // Update auth context with new user data
+        updateAuthUser({
+          user: res.data.user,
+          token: localStorage.getItem('token')
+        });
+        
+        setAgreementAccepted(true);
+        setShowAgreement(false);
+      } catch (err) {
+        console.error('Failed to accept agreement:', err);
+        alert('Failed to accept agreement. Please try again.');
+      } finally {
+        setAcceptingAgreement(false);
+      }
+    }
+  };
+
+  const handleDeclineAgreement = () => {
+    setShowAgreement(false);
+    // User cannot use scanner without accepting
   };
 
   const startScan = async () => {
@@ -43,6 +86,12 @@ const Scanner = () => {
       return;
     }
 
+    if (!agreementAccepted) {
+      alert('You must accept the scanner usage agreement first');
+      setShowAgreement(true);
+      return;
+    }
+
     if ((user?.scanCredits || 0) <= 0) {
       alert('No scan credits available. Please upgrade your plan.');
       return;
@@ -53,7 +102,6 @@ const Scanner = () => {
     setScanComplete(false);
 
     try {
-      // Simulate progress
       let progress = 0;
       const interval = setInterval(() => {
         progress += Math.random() * 20;
@@ -82,6 +130,13 @@ const Scanner = () => {
     }
   };
 
+  // Example (pseudo-code)
+const handleScan = async () => {
+  const response = await api.scan(target);
+  setScanResult(response.scanResult);
+  setCredits(response.credits); // <-- update credits here
+};
+
   const startNewScan = () => {
     setScanStarted(false);
     setScanProgress(0);
@@ -90,9 +145,82 @@ const Scanner = () => {
     setCurrentScan(null);
   };
 
-  const downloadReport = (scanId) => {
-    window.open(`http://localhost:5000/api/report/${scanId}`, '_blank');
-  };
+// Update the downloadReport function in frontend/src/pages/Scanner.jsx
+// In frontend/src/pages/Scanner.jsx - Replace the downloadReport function with this:
+
+const downloadReport = async (scanId) => {
+  try {
+    const token = localStorage.getItem("token");
+    
+    if (!token) {
+      alert("Authentication required. Please login again.");
+      return;
+    }
+
+    // Show loading state (optional - you can add a loading indicator)
+    console.log("Downloading report for scan:", scanId);
+
+    // Fetch with proper authorization
+    const response = await fetch(
+      `http://localhost:5000/api/report/${scanId}`,
+      {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Accept": "application/pdf"
+        }
+      }
+    );
+
+    // Handle response
+    if (!response.ok) {
+      let errorMsg = "Failed to download report";
+      try {
+        const errorData = await response.json();
+        errorMsg = errorData.error || errorMsg;
+      } catch (e) {
+        // Response wasn't JSON
+      }
+      alert(errorMsg);
+      return;
+    }
+
+    // Get the blob
+    const blob = await response.blob();
+
+    // Verify it's a PDF
+    if (blob.type !== "application/pdf") {
+      console.error("Invalid file type received:", blob.type);
+      alert("Invalid file format received. Please try again.");
+      return;
+    }
+
+    // Create download link
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+
+    // Set filename with timestamp
+    const timestamp = new Date().toISOString().split("T")[0];
+    const filename = `vapt-scan-report-${scanId.substring(0, 8)}-${timestamp}.pdf`;
+    link.setAttribute("download", filename);
+
+    // Append to body, click, and cleanup
+    document.body.appendChild(link);
+    link.click();
+
+    // Cleanup
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+    }, 100);
+
+    console.log("Report downloaded successfully");
+  } catch (err) {
+    console.error("Download error:", err);
+    alert("Failed to download report. Please check your connection and try again.");
+  }
+};
 
   const getSeverityColor = (severity) => {
     switch (severity?.toLowerCase()) {
@@ -112,6 +240,15 @@ const Scanner = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-200 flex flex-col">
       <Navigation />
+
+      {/* Show agreement modal if needed */}
+      {showAgreement && user && (
+        <ClickwrapAgreement
+          onAccept={handleAcceptAgreement}
+          onDecline={handleDeclineAgreement}
+          isLoading={acceptingAgreement}
+        />
+      )}
 
       <div className="absolute inset-0 opacity-30 pointer-events-none z-0">
         <div
@@ -143,6 +280,13 @@ const Scanner = () => {
           </div>
         )}
 
+        {agreementAccepted && user && (
+          <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-3">
+            <CheckCircle size={20} className="text-green-400" />
+            <span className="text-green-300 text-sm font-medium">Scanner agreement accepted. You can now proceed with scanning.</span>
+          </div>
+        )}
+
         <div className="flex gap-3 mb-8 border-b border-slate-800">
           <button
             onClick={() => setActiveTab('scanner')}
@@ -157,7 +301,10 @@ const Scanner = () => {
           <button
             onClick={() => {
               if (!user) alert('Please login to view scan history');
-              else setActiveTab('history');
+              else if (!agreementAccepted) {
+                alert('Please accept the scanner agreement first');
+                setShowAgreement(true);
+              } else setActiveTab('history');
             }}
             className={`px-6 py-3 font-medium text-sm transition-all border-b-2 -mb-px ${
               activeTab === 'history'
@@ -185,9 +332,15 @@ const Scanner = () => {
                     value={target}
                     onChange={(e) => setTarget(e.target.value)}
                     placeholder="https://example.com or 192.168.1.1"
-                    disabled={!user || (scanStarted && scanProgress < 100)}
+                    disabled={!user || (scanStarted && scanProgress < 100) || !agreementAccepted}
                     className="w-full bg-slate-800/40 border border-slate-700/50 rounded-lg px-4 py-3 text-white placeholder-slate-500/70 focus:outline-none focus:border-rose-500/50 focus:ring-1 focus:ring-rose-500/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
+                  {user && !agreementAccepted && (
+                    <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
+                      <AlertCircle size={14} />
+                      Accept the scanner agreement to enable scanning
+                    </p>
+                  )}
                 </div>
 
                 {scanStarted && (
@@ -228,7 +381,7 @@ const Scanner = () => {
               ) : (
                 <button
                   onClick={scanComplete ? startNewScan : startScan}
-                  disabled={(scanStarted && scanProgress < 100) || !target.trim() || (user?.scanCredits || 0) <= 0}
+                  disabled={(scanStarted && scanProgress < 100) || !target.trim() || (user?.scanCredits || 0) <= 0 || !agreementAccepted}
                   className="w-full px-6 py-3.5 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 disabled:shadow-none"
                 >
                   {scanComplete ? (
@@ -302,55 +455,25 @@ const Scanner = () => {
                       </div>
                     ))}
                   </div>
-
-                  {currentScan.findings?.length === 0 && (
-                    <div className="text-center py-12 text-slate-400">
-                      <CheckCircle size={48} className="mx-auto mb-4 text-green-400" />
-                      <p className="text-lg">No vulnerabilities detected! 🎉</p>
-                    </div>
-                  )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-6 bg-gradient-to-br from-slate-900/60 to-slate-900/30 border border-slate-800/60 backdrop-blur rounded-xl mb-8">
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-white mb-1">
-                      {(currentScan.findings || []).filter(f => f.severity === 'CRITICAL').length}
-                    </p>
-                    <p className="text-sm text-red-400">Critical</p>
+                {currentScan && (
+                  <div className="flex gap-4 mt-8">
+                    <button
+                      onClick={startNewScan}
+                      className="flex-1 px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold rounded-lg transition-all"
+                    >
+                      Start New Scan
+                    </button>
+                    <button
+                      onClick={() => downloadReport(currentScan._id)}
+                      className="flex-1 px-6 py-3 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                    >
+                      <Download size={18} />
+                      Download Report
+                    </button>
                   </div>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-white mb-1">
-                      {(currentScan.findings || []).filter(f => f.severity === 'HIGH').length}
-                    </p>
-                    <p className="text-sm text-orange-400">High</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-white mb-1">
-                      {(currentScan.findings || []).filter(f => f.severity === 'MEDIUM').length}
-                    </p>
-                    <p className="text-sm text-yellow-400">Medium</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-white mb-1">
-                      {(currentScan.findings || []).filter(f => f.severity === 'LOW').length}
-                    </p>
-                    <p className="text-sm text-blue-400">Low</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-white mb-1">
-                      {currentScan.findings?.length || 0}
-                    </p>
-                    <p className="text-sm text-slate-400">Total</p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => downloadReport(currentScan._id)}
-                  className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg transition-all"
-                >
-                  <Download size={18} />
-                  Download Report (PDF)
-                </button>
+                )}
               </div>
             )}
           </div>
@@ -358,59 +481,39 @@ const Scanner = () => {
 
         {activeTab === 'history' && (
           <div className="animate-fade-in">
-            {!user ? (
-              <div className="bg-gradient-to-br from-slate-900/60 to-slate-900/30 border border-slate-800/60 backdrop-blur rounded-2xl p-12 shadow-2xl text-center">
-                <LogIn size={48} className="mx-auto text-slate-400 mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">Sign in to view your scan history</h3>
+            <div className="bg-gradient-to-br from-slate-900/60 to-slate-900/30 border border-slate-800/60 backdrop-blur rounded-2xl p-8 shadow-2xl">
+              <div className="flex items-center gap-3 mb-6">
+                <Clock className="text-rose-500" size={24} strokeWidth={1.5} />
+                <h2 className="text-2xl font-semibold text-white">Scan History</h2>
               </div>
-            ) : scans.length === 0 ? (
-              <div className="bg-gradient-to-br from-slate-900/60 to-slate-900/30 border border-slate-800/60 backdrop-blur rounded-2xl p-12 shadow-2xl text-center">
-                <Clock size={48} className="mx-auto text-slate-400 mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">No scans yet</h3>
-                <p className="text-slate-400">Start your first security scan to build your history.</p>
-              </div>
-            ) : (
-              <div className="space-y-8">
-                <SeverityChart scans={scans} />
 
-                <div className="bg-gradient-to-br from-slate-900/60 to-slate-900/30 border border-slate-800/60 backdrop-blur rounded-2xl p-8 shadow-2xl">
-                  <div className="flex items-center gap-3 mb-8">
-                    <TrendingUp className="text-rose-500" size={24} strokeWidth={1.5} />
-                    <h2 className="text-2xl font-semibold text-white">Scan History</h2>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-slate-800/60">
-                          <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Target</th>
-                          <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Findings</th>
-                          <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Date</th>
-                          <th className="text-left px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Report</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {scans.map((scan) => (
-                          <tr key={scan._id} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-all duration-200">
-                            <td className="px-4 py-4 text-sm text-white font-medium truncate">{scan.target}</td>
-                            <td className="px-4 py-4 text-sm text-slate-300 font-medium">{scan.findings?.length || 0} issues</td>
-                            <td className="px-4 py-4 text-sm text-slate-500">{new Date(scan.createdAt).toLocaleDateString()}</td>
-                            <td className="px-4 py-4 text-sm">
-                              <button
-                                onClick={() => downloadReport(scan._id)}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-xs font-medium transition-all"
-                              >
-                                <Download size={14} />
-                                PDF
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+              {scans.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-slate-400">No scans yet. Start your first scan above!</p>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="space-y-4">
+                  {scans.map((scan) => (
+                    <div
+                      key={scan._id}
+                      className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4 flex items-center justify-between hover:bg-slate-800/50 transition-all"
+                    >
+                      <div>
+                        <p className="text-white font-semibold">{scan.target}</p>
+                        <p className="text-slate-400 text-sm">{new Date(scan.createdAt).toLocaleString()}</p>
+                      </div>
+                      <button
+                        onClick={() => downloadReport(scan._id)}
+                        className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-lg transition-all flex items-center gap-2"
+                      >
+                        <Download size={16} />
+                        Download
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

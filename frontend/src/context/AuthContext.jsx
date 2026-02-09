@@ -17,9 +17,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("user", JSON.stringify(data.user));
       setUser(data.user);
     } else {
-      // fallback for Google login
+      // fallback for Google login - set minimal user data
       const existingUser = JSON.parse(localStorage.getItem("user"));
-      setUser(existingUser || { name: "Google User" });
+      setUser(existingUser || { name: "User", scanCredits: 0 });
     }
   };
 
@@ -35,8 +35,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("user", JSON.stringify(updated));
   };
 
+  const updateUser = (userData) => {
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateCredits }}>
+    <AuthContext.Provider value={{ user, login, logout, updateCredits, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

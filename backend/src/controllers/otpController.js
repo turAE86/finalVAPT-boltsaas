@@ -25,5 +25,17 @@ export const verifyOTP = async (req, res) => {
     { expiresIn: "7d" }
   );
 
-  res.json({ token, user });
+  // In your OTP verification (likely in otpController.js)
+// When creating/verifying user, make sure to return:
+res.json({
+  token,
+  user: {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    scanCredits: user.scanCredits,
+    scannerAgreementAccepted: user.scannerAgreementAccepted
+  }
+});
+
 };

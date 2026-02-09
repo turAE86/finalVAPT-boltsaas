@@ -49,7 +49,59 @@ export const signup = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+// Add this to backend/src/controllers/authController.js
 
+// GET CURRENT USER
+export const getCurrentUser = async (req, res) => {
+  try {
+    const userId = req.user.id; // from auth middleware
+
+    const user = await User.findById(userId).select(
+      "-password -otp -otpExpiry -resetToken -resetTokenExpiry"
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ACCEPT SCANNER AGREEMENT
+export const acceptScannerAgreement = async (req, res) => {
+  try {
+    const userId = req.user.id; // from auth middleware
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        scannerAgreementAccepted: true,
+        scannerAgreementAcceptedAt: new Date(),
+        scannerAgreementVersion: "1.0"
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({
+      message: "Scanner agreement accepted successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        scannerAgreementAccepted: user.scannerAgreementAccepted
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 // LOGIN
 export const login = async (req, res) => {
   try {
