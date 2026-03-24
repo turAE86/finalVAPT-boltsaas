@@ -1,7 +1,7 @@
 # 🔐 VAPT SaaS Platform (BoltSaaS)
 
-📦 **GitHub Repository:**
-👉 https://github.com/turAE86/finalVAPT-boltsaas
+📦 **Documentation of project**
+👉 (https://docs.google.com/document/d/18513LXy17AGGwGV_zUEAEi7QrppUlK7pEePhMzElWWY/edit?usp=sharing)
 
 ---
 
