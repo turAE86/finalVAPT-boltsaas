@@ -1,0 +1,2 @@
+- [ ] Add link properties to the services array in Services.jsx for Network Infrastructure, Cloud Security, and API Security.
+- [ ] Wrap each service div with Link component to make the boxes clickable.

@@ -1,6 +1,9 @@
 import { Globe, Server, Layers, Code } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const ThreatManagementSection = () => {
+  const navigate = useNavigate();
+
   const services = [
     {
       icon: Globe,
@@ -27,6 +30,25 @@ const ThreatManagementSection = () => {
       color: "rose"
     }
   ];
+
+  const handleServiceClick = (serviceTitle) => {
+    const routeMap = {
+      "Web App Security": "/web-app-security",
+      "Network Infra": "/network-infrastructure",
+      "Cloud Security": "/cloud-security",
+      "API Security": "/api-security"
+    };
+
+    const route = routeMap[serviceTitle] || "/";
+
+    // Force scroll to top immediately
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+
+    // Use window.location for hard navigation to bypass React Router scroll behavior
+    window.location.href = route;
+  };
 
   return (
     <section className="relative py-20 px-6">
@@ -64,12 +86,15 @@ const ThreatManagementSection = () => {
                   {service.desc}
                 </p>
 
-                <div className="mt-6 flex items-center text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-semibold">
+                <button
+                  onClick={() => handleServiceClick(service.title)}
+                  className="mt-6 flex items-center text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-semibold hover:text-rose-300 bg-transparent border-none cursor-pointer"
+                >
                   Learn more
                   <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </div>
+                </button>
               </div>
             );
           })}

@@ -9,7 +9,7 @@ import ClickwrapAgreement from '../components/ClickwrapAgreement';
 import SeverityChart from '../components/SeverityChart';
 
 const Scanner = () => {
-  const { user, login: updateAuthUser } = useAuth();
+  const { user, login: updateAuthUser, updateCredits } = useAuth();
   const [target, setTarget] = useState('');
   const [scanStarted, setScanStarted] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
@@ -118,6 +118,8 @@ const Scanner = () => {
       setScanProgress(100);
       setCurrentScan(res.data);
       setScanComplete(true);
+      // Update credits in auth context after successful scan
+      updateCredits((user.scanCredits || 0) - 1);
       await fetchScanHistory();
     } catch (err) {
       clearInterval(interval);

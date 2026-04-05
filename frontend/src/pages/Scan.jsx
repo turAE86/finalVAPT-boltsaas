@@ -8,19 +8,21 @@ export default function Scan() {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
-const startScan = async () => {
-  try {
-    const res = await api.post("/api/scan", { target });
-    setResult(res.data);
-  } catch (err) {
-    if (err.response?.status === 403) {
-      alert("Scan limit reached. Please upgrade your plan.");
-    } else {
-      alert("Scan failed");
+  const startScan = async () => {
+    try {
+      setLoading(true);
+      const res = await api.post("/api/scan", { target });
+      setResult(res.data);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        alert("Scan limit reached. Please upgrade your plan.");
+      } else {
+        alert("Scan failed");
+      }
+    } finally {
+      setLoading(false);
     }
-  }
-};
-
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
@@ -77,11 +79,25 @@ const startScan = async () => {
                 <span className="text-sm font-semibold">{f.severity}</span>
               </div>
 
-              <p className="text-sm mt-1">{f.owasp}</p>
-              <p className="text-sm text-gray-700 mt-2">
-                {f.description}
-              </p>
+              {f.owasp && <p className="text-sm mt-1">{f.owasp}</p>}
+              <p className="text-sm text-gray-700 mt-2">{f.description}</p>
 
+              {/* Extra technical details */}
+              {f.param && (
+                <div className="text-xs text-gray-600 mt-1">
+                  <b>Param:</b> {f.param}
+                </div>
+              )}
+              {f.payload && (
+                <div className="text-xs text-gray-600 mt-1">
+                  <b>Payload:</b> {f.payload}
+                </div>
+              )}
+              {f.url && (
+                <div className="text-xs text-gray-600 mt-1 break-all">
+                  <b>URL:</b> {f.url}
+                </div>
+              )}
               {f.evidence && (
                 <pre className="mt-2 p-2 bg-gray-100 text-xs rounded">
                   {String(f.evidence)}

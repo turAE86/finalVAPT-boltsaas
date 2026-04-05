@@ -95,6 +95,7 @@ export const acceptScannerAgreement = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        scanCredits: user.scanCredits,
         scannerAgreementAccepted: user.scannerAgreementAccepted
       }
     });
@@ -133,7 +134,9 @@ export const login = async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        scanCredits: user.scanCredits,
+        scannerAgreementAccepted: user.scannerAgreementAccepted
       },
       token
     });

@@ -9,25 +9,29 @@ const Services = () => {
       icon: Globe,
       title: "Web Application Security",
       description: "Comprehensive DAST and SAST scanning to identify OWASP Top 10 vulnerabilities in real-time.",
-      features: ["Dynamic Analysis", "Static Code Analysis", "API Endpoint Testing", "Real-time Reporting"]
+      features: ["Dynamic Analysis", "Static Code Analysis", "API Endpoint Testing", "Real-time Reporting"],
+      link: "/web-app-security"
     },
     {
       icon: Server,
       title: "Network Infrastructure Assessment",
       description: "Internal and external network scanning to detect open ports, weak configurations, and legacy services.",
-      features: ["Port Scanning", "Service Enumeration", "Vulnerability Detection", "Risk Prioritization"]
+      features: ["Port Scanning", "Service Enumeration", "Vulnerability Detection", "Risk Prioritization"],
+      link: "/network-infrastructure"
     },
     {
       icon: Layers,
       title: "Cloud Security & CSPM",
       description: "Multi-cloud workload protection for AWS, Azure, and GCP environments with compliance monitoring.",
-      features: ["Cloud Posture Management", "Workload Protection", "Compliance Audits", "Security Baselines"]
+      features: ["Cloud Posture Management", "Workload Protection", "Compliance Audits", "Security Baselines"],
+      link: "/cloud-security"
     },
     {
       icon: Code,
       title: "API Security Testing",
       description: "Automated discovery and testing of REST, GraphQL, and SOAP endpoints for logic flaws.",
-      features: ["Endpoint Discovery", "Logic Flaw Detection", "Authentication Testing", "Rate Limiting Analysis"]
+      features: ["Endpoint Discovery", "Logic Flaw Detection", "Authentication Testing", "Rate Limiting Analysis"],
+      link: "/api-security"
     }
   ];
 
@@ -74,21 +78,23 @@ const Services = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20">
             {services.map((service, i) => (
-              <div key={i} className="p-8 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-rose-500/50 transition-all group hover:-translate-y-1">
-                <div className="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center mb-6 group-hover:bg-rose-500/10 transition-colors">
-                  <service.icon className="text-rose-500" size={24} />
+              <Link key={i} to={service.link} className="block">
+                <div className="p-8 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-rose-500/50 transition-all group hover:-translate-y-1">
+                  <div className="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center mb-6 group-hover:bg-rose-500/10 transition-colors">
+                    <service.icon className="text-rose-500" size={24} />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-3">{service.title}</h3>
+                  <p className="text-slate-400 mb-6">{service.description}</p>
+                  <ul className="space-y-2">
+                    {service.features.map((feature, j) => (
+                      <li key={j} className="flex items-center gap-2 text-slate-300 text-sm">
+                        <CheckCircle size={16} className="text-emerald-500" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-3">{service.title}</h3>
-                <p className="text-slate-400 mb-6">{service.description}</p>
-                <ul className="space-y-2">
-                  {service.features.map((feature, j) => (
-                    <li key={j} className="flex items-center gap-2 text-slate-300 text-sm">
-                      <CheckCircle size={16} className="text-emerald-500" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              </Link>
             ))}
           </div>
 

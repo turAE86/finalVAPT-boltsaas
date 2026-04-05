@@ -25,7 +25,7 @@ const MethodologySection = () => {
     }
   ];
 
-  const certifications = ['ISO 27001', 'CREST', 'CHECK'];
+  const certifications = ['ISO 27001', 'SOC 2', 'CISSP', 'OSCP', 'OWASP'];
 
   return (
     <section className="relative py-20 px-6">
@@ -77,16 +77,29 @@ const MethodologySection = () => {
               </h3>
 
               {/* Company Logos Placeholder Grid */}
-              <div className="grid grid-cols-3 gap-4 mb-8">
-                {[...Array(6)].map((_, idx) => (
-                  <div
-                    key={idx}
-                    className="aspect-square bg-slate-700/30 rounded-lg flex items-center justify-center border border-slate-700/50 hover:border-rose-500/30 transition-colors"
-                  >
-                    <div className="text-xs text-slate-400 text-center px-2">Logo {idx + 1}</div>
-                  </div>
-                ))}
-              </div>
+{/* Company Logos Placeholder Grid */}
+<div className="grid grid-cols-3 gap-4 mb-8">
+  {[
+    { src: '/logos/AWS_logo.png', alt: 'AWS' },
+    { src: '/logos/search.png', alt: 'Google Cloud' },
+    { src: '/logos/owasp-logo.webp', alt: 'OWASP' },
+    { src: '/logos/icons8-cloudflare-100 (1).png', alt: 'Cloudflare' },
+    { src: '/logos/GitHub-Logo.png', alt: 'GitHub' },
+    { src: '/logos/docker-logo.png', alt: 'Docker' }
+  ].map((logo, idx) => (
+    <div
+      key={idx}
+      className="aspect-square bg-slate-700/30 rounded-lg flex items-center justify-center border border-slate-700/50 hover:border-rose-500/30 transition-colors p-4"
+    >
+      <img 
+        src={logo.src} 
+        alt={logo.alt}
+        className="max-w-full max-h-full object-contain filter grayscale hover:grayscale-0 transition-all duration-300"
+        onError={(e) => e.target.style.display = 'none'}
+      />
+    </div>
+  ))}
+</div>
 
               <div className="border-t border-slate-700/50 pt-8">
                 <p className="text-slate-400 text-center text-sm mb-6">

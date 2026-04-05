@@ -95,6 +95,7 @@ const ClickwrapAgreement = ({ onAccept, onDecline, isLoading }) => {
             <p className="text-slate-300 leading-relaxed ml-8">
               You agree NOT to use the VAPT Bolt scanner for:
             </p>
+          
             <ul className="text-slate-300 leading-relaxed ml-16 mt-2 space-y-1">
               <li>• Hacking, unauthorized access, or system compromise</li>
               <li>• Data theft, extraction, or exfiltration</li>

@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+/* Ensure all pages start at the top */
+html, body {
+  scroll-behavior: auto !important;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}

@@ -17,13 +17,13 @@ const LoginPage = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {   // the is function that handles the login form submission. It prevents the default form submission behavior, resets any existing error messages, and sets a loading state to indicate that the login process is underway. It then attempts to log in using the provided credentials by calling the login function from the authService. If the login is successful, it updates the authentication context with the returned data and navigates the user to the scanner page. If there is an error during login, it checks if the error status is 403 (which indicates that OTP verification is required) and navigates to the OTP verification page with the user's email. For any other errors, it sets an appropriate error message to be displayed to the user. Finally, it resets the loading state regardless of the outcome.
     e.preventDefault();
     setError('');
     setLoading(true);
-
+ 
     try {
-      const res = await login(form);
+      const res = await login(form);  
       authLogin(res.data);
       navigate('/scanner');
     } catch (err) {

