@@ -17,13 +17,27 @@ export const downloadReport = async (req, res) => {
       return res.status(404).json({ error: "Scan not found" });
     }
 
-    // Validate scan data before generating PDF
-    if (!scan.findings || !Array.isArray(scan.findings)) {
-      return res.status(400).json({ error: "Invalid scan data. No findings available." });
+    // Prepare findings for PDF generation
+    const findings = scan.findings || [];
+    const results = scan.results || {};
+    
+    // Include open ports in findings if available
+    if (results.open_ports && Array.isArray(results.open_ports) && results.open_ports.length > 0) {
+      if (!findings.some(f => f.type === 'OPEN_PORTS')) {
+        findings.unshift({
+          type: 'OPEN_PORTS',
+          severity: 'MEDIUM',
+          owasp: 'A05:2021 – Security Misconfiguration',
+          description: 'Unnecessary open ports increase attack surface',
+          evidence: results.open_ports
+        });
+      }
     }
 
     try {
-      filePath = await generatePDF(scan.toObject());
+      const scanData = scan.toObject();
+      scanData.findings = findings;
+      filePath = await generatePDF(scanData);
     } catch (pdfError) {
       console.error("PDF Generation failed:", pdfError);
       return res.status(500).json({ 

@@ -21,7 +21,7 @@ def scan_headers(target: str):
     for scheme in ["http", "https"]:
         url = f"{scheme}://{target}"
         try:
-            res = requests.get(url, timeout=5, verify=False)
+            res = requests.get(url, timeout=2, verify=False)
             for header in SECURITY_HEADERS:
                 if header not in res.headers:
                     results["missing"].append(header)

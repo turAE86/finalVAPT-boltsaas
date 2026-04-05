@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+import sys
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import (
@@ -41,6 +42,13 @@ def add_footer(canvas, doc):
 
 def generate_report(scan_data):
     try:
+        # DEBUG: Print the scan data structure
+        print("=" * 50, file=sys.stderr)
+        print("DEBUG: scan_data keys:", scan_data.keys() if isinstance(scan_data, dict) else "Not a dict", file=sys.stderr)
+        print("DEBUG: findings count:", len(scan_data.get("findings", [])), file=sys.stderr)
+        print("DEBUG: open_ports:", scan_data.get("open_ports", []), file=sys.stderr)
+        print("=" * 50, file=sys.stderr)
+        
         scanner_dir = Path(__file__).parent.absolute()
         reports_dir = scanner_dir / "reports"
         reports_dir.mkdir(parents=True, exist_ok=True)
@@ -98,10 +106,13 @@ def generate_report(scan_data):
         elements.append(Paragraph("Security Assessment Report", title))
 
         # ---------- INFO CARD ----------
+        target = scan_data.get("target", "N/A")
+        scan_date = scan_data.get("createdAt", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        
         info_data = [
-            ["Target URL:", scan_data.get("target", "N/A")],
-            ["Scan Date:", scan_data.get("createdAt", "N/A")],
-            ["Report ID:", f"VAPT-{datetime.now().strftime('%Y%m%d')}"]
+            ["Target URL:", target],
+            ["Scan Date:", scan_date],
+            ["Report ID:", f"VAPT-{datetime.now().strftime('%Y%m%d%H%M%S')}"]
         ]
 
         info_table = Table(info_data, colWidths=[1.5*inch, 5.8*inch])
@@ -119,26 +130,41 @@ def generate_report(scan_data):
         elements.append(info_table)
         elements.append(Spacer(1, 0.3*inch))
 
-        # ---------- SUMMARY & CHART LAYOUT ----------
-        elements.append(Paragraph("Executive Summary", section))
-
+        # ---------- PREPARE FINDINGS DATA ----------
         findings = scan_data.get("findings", [])
-        severity = {"CRITICAL":0, "HIGH":0, "MEDIUM":0, "LOW":0, "INFO":0}
+        open_ports = scan_data.get("open_ports", [])
+        
+        # Add open ports as a finding if they exist
+        if open_ports:
+            findings.insert(0, {
+                "type": "OPEN_PORTS",
+                "severity": "MEDIUM",
+                "description": "Unnecessary open ports increase attack surface",
+                "evidence": open_ports,
+                "owasp": "A05:2021 – Security Misconfiguration"
+            })
 
+        # Count severity levels
+        severity = {"CRITICAL":0, "HIGH":0, "MEDIUM":0, "LOW":0, "INFO":0}
         for f in findings:
             sev = str(f.get("severity","INFO")).upper()
-            severity[sev if sev in severity else "INFO"] += 1
+            if sev not in severity:
+                sev = "INFO"
+            severity[sev] += 1
 
         total = sum(severity.values())
+
+        # ---------- SUMMARY & CHART LAYOUT ----------
+        elements.append(Paragraph("Executive Summary", section))
 
         # 1. Summary Table
         summary_data = [
             ["Severity", "Count"],
-            ["Critical", severity["CRITICAL"]],
-            ["High", severity["HIGH"]],
-            ["Medium", severity["MEDIUM"]],
-            ["Low", severity["LOW"]],
-            ["Total", total]
+            ["Critical", str(severity["CRITICAL"])],
+            ["High", str(severity["HIGH"])],
+            ["Medium", str(severity["MEDIUM"])],
+            ["Low", str(severity["LOW"])],
+            ["Total", str(total)]
         ]
 
         summary_table = Table(summary_data, colWidths=[1.5*inch, 1*inch])
@@ -209,7 +235,7 @@ def generate_report(scan_data):
         elements.append(Spacer(1, 0.3*inch))
 
         # ---------- FINDINGS DETAILS ----------
-        if total > 0:
+        if total > 0 and findings:
             elements.append(Paragraph("Detailed Findings", section))
 
             # Adjusted widths to total 7.3 inches
@@ -217,18 +243,23 @@ def generate_report(scan_data):
 
             for i, f in enumerate(findings, 1):
                 sev = str(f.get("severity","INFO")).upper()
-                sev_color = SEVERITY_COLORS.get(sev, SEVERITY_COLORS["INFO"])
+                if sev not in SEVERITY_COLORS:
+                    sev = "INFO"
+                sev_color = SEVERITY_COLORS[sev]
 
                 sev_para = Paragraph(
                     f'<font color="{sev_color.hexval()}"><b>{sev}</b></font>',
                     normal
                 )
+                
+                vuln_type = f.get("type", "Unknown")
+                description = f.get("description", "No description provided.")
 
                 table_data.append([
                     str(i),
-                    Paragraph(f.get("type","Unknown"), normal),
+                    Paragraph(vuln_type, normal),
                     sev_para,
-                    Paragraph(f.get("description","No description provided."), normal)
+                    Paragraph(description, normal)
                 ])
 
             findings_table = Table(table_data, colWidths=[0.4*inch, 2.0*inch, 1.0*inch, 3.9*inch])
@@ -248,11 +279,62 @@ def generate_report(scan_data):
             ]))
 
             elements.append(findings_table)
+            elements.append(Spacer(1, 0.3*inch))
+            
+            # ---------- DETAILED EVIDENCE SECTION ----------
+            elements.append(Paragraph("Detailed Evidence", section))
+            
+            for i, f in enumerate(findings, 1):
+                sev = str(f.get("severity","INFO")).upper()
+                vuln_type = f.get("type", "Unknown")
+                
+                # Heading for each finding
+                elements.append(Paragraph(f"{i}. {vuln_type}", ParagraphStyle(
+                    "subsection",
+                    parent=styles["Heading3"],
+                    fontSize=11,
+                    fontName="Helvetica-Bold",
+                    textColor=SEVERITY_COLORS.get(sev, SEVERITY_COLORS["INFO"]),
+                    spaceBefore=10,
+                    spaceAfter=6
+                )))
+                
+                # Description
+                if f.get("description"):
+                    elements.append(Paragraph(f"<b>Description:</b> {f.get('description')}", normal))
+                
+                # Evidence/Details
+                if f.get("evidence"):
+                    evidence = f.get("evidence")
+                    if isinstance(evidence, list):
+                        elements.append(Paragraph(f"<b>Evidence:</b> {', '.join(str(e) for e in evidence)}", normal))
+                    else:
+                        elements.append(Paragraph(f"<b>Evidence:</b> {evidence}", normal))
+                
+                if f.get("details"):
+                    details = f.get("details")
+                    if isinstance(details, list) and details:
+                        elements.append(Paragraph(f"<b>Details:</b>", normal))
+                        for detail in details:
+                            if isinstance(detail, dict):
+                                detail_str = " | ".join([f"{k}: {v}" for k, v in detail.items()])
+                                elements.append(Paragraph(f"• {detail_str}", normal))
+                            else:
+                                elements.append(Paragraph(f"• {detail}", normal))
+                
+                # OWASP Reference
+                if f.get("owasp"):
+                    elements.append(Paragraph(f"<b>OWASP:</b> {f.get('owasp')}", normal))
+                
+                elements.append(Spacer(1, 0.15*inch))
 
         # ---------- BUILD ----------
         doc.build(elements, onFirstPage=add_footer, onLaterPages=add_footer)
         return str(filename)
 
     except Exception as e:
-        print(f"Error generating PDF: {e}")
+        print(f"Error generating PDF: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
         raise e
+

@@ -28,39 +28,59 @@ if __name__ == "__main__":
         
         print(f"Loaded scan data, generating PDF...", file=sys.stderr)
         
-        # --- AGGREGATE FINDINGS ---
+        # --- PROCESS FINDINGS ---
+        # Handle both flat findings list and grouped findings structure
+        existing_findings = scan_data.get("findings", [])
         findings = []
-        mapping = {
-            "xss": "Cross-Site Scripting (XSS)",
-            "sqli": "SQL Injection",
-            "directory_traversal": "Directory Traversal",
-            "command_injection": "Command Injection",
-            "open_redirect": "Open Redirect",
-            "ssrf": "SSRF",
+        
+        # Mapping for vulnerability types to OWASP
+        owasp_mapping = {
+            "XSS": "A03:2021 – Injection",
+            "Cross-Site Scripting": "A03:2021 – Injection",
+            "SQLI": "A03:2021 – Injection",
+            "SQL Injection": "A03:2021 – Injection",
+            "Directory Traversal": "A01:2021 – Broken Access Control",
+            "Command Injection": "A03:2021 – Injection",
+            "Open Redirect": "A03:2021 – Injection",
+            "SSRF": "A10:2021 – Server-Side Request Forgery (SSRF)",
         }
-        default_severity = {
-            "xss": "HIGH",
-            "sqli": "CRITICAL",
-            "directory_traversal": "HIGH",
-            "command_injection": "CRITICAL",
-            "open_redirect": "MEDIUM",
-            "ssrf": "HIGH",
+        
+        severity_mapping = {
+            "XSS": "HIGH",
+            "Cross-Site Scripting": "HIGH",
+            "SQLI": "CRITICAL",
+            "SQL Injection": "CRITICAL",
+            "Directory Traversal": "HIGH",
+            "Command Injection": "CRITICAL",
+            "Open Redirect": "MEDIUM",
+            "SSRF": "HIGH",
         }
-        for key, label in mapping.items():
-            data = scan_data.get(key)
-            if not data:
-                continue
-            details = data.get("details") if isinstance(data, dict) else None
-            if details:
-                for item in details:
-                    findings.append({
-                        "type": label,
-                        "severity": data.get("severity", default_severity.get(key, "MEDIUM")),
-                        "description": item.get("evidence", str(item)),
-                        "param": item.get("param", ""),
-                        "payload": item.get("payload", ""),
-                        "url": item.get("url", ""),
-                    })
+        
+        # If findings is a list (flat structure from engine.py)
+        if isinstance(existing_findings, list):
+            for item in existing_findings:
+                if isinstance(item, dict):
+                    vuln_type = item.get("type", "Unknown Vulnerability")
+                    severity = item.get("severity") or severity_mapping.get(vuln_type, "MEDIUM")
+                    
+                    finding = {
+                        "type": vuln_type,
+                        "severity": severity,
+                        "description": item.get("description") or f"{vuln_type} vulnerability found",
+                        "evidence": item.get("evidence") or [item.get("payload", "N/A")],
+                        "owasp": item.get("owasp") or owasp_mapping.get(vuln_type, "A03:2021 – Injection"),
+                    }
+                    
+                    # Add details if available
+                    if item.get("url") or item.get("param") or item.get("payload"):
+                        finding["details"] = [{
+                            "URL": item.get("url", "N/A"),
+                            "Parameter": item.get("param", "N/A"),
+                            "Payload": item.get("payload", "N/A")
+                        }]
+                    
+                    findings.append(finding)
+        
         scan_data["findings"] = findings
 
         # Generate the PDF
